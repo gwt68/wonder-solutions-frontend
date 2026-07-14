@@ -1,18 +1,38 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Contacts from './pages/Contacts.jsx';
 import Groups from './pages/Groups.jsx';
+import Texts from './pages/Texts.jsx';
 import Messages from './pages/Messages.jsx';
 import Settings from './pages/Settings.jsx';
+import Login from './pages/Login.jsx';
+import { setToken } from './api.js';
 
 const PAGES = [
-  { key: 'contacts', label: 'Contacts', icon: <i className="ti ti-users" /> },
-  { key: 'groups', label: 'Groups', icon: <i className="ti ti-folder" /> },
-  { key: 'messages', label: 'Messages', icon: <i className="ti ti-mail" /> },
-  { key: 'settings', label: 'Settings', icon: <i className="ti ti-settings" /> },
+  { key: 'contacts', label: 'Contacts' },
+  { key: 'groups', label: 'Groups' },
+  { key: 'texts', label: 'Texts' },
+  { key: 'messages', label: 'Recordings' },
+  { key: 'settings', label: 'Settings' },
 ];
 
 export default function App() {
   const [page, setPage] = useState('contacts');
+  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('wonder_token'));
+
+  useEffect(() => {
+    function handleLogout() { setLoggedIn(false); }
+    window.addEventListener('wonder-logout', handleLogout);
+    return () => window.removeEventListener('wonder-logout', handleLogout);
+  }, []);
+
+  function handleLogoutClick() {
+    setToken(null);
+    setLoggedIn(false);
+  }
+
+  if (!loggedIn) {
+    return <Login onLogin={() => setLoggedIn(true)} />;
+  }
 
   return (
     <div className="app-shell">
@@ -37,10 +57,18 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button
+          className="nav-item"
+          style={{ marginTop: 'auto' }}
+          onClick={handleLogoutClick}
+        >
+          <i className="ti ti-logout" /> Log out
+        </button>
       </aside>
       <main className="main">
         {page === 'contacts' && <Contacts />}
         {page === 'groups' && <Groups />}
+        {page === 'texts' && <Texts />}
         {page === 'messages' && <Messages />}
         {page === 'settings' && <Settings />}
       </main>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api, groupAudioLabelUrl } from '../api.js';
 
 export default function Groups() {
   const [groups, setGroups] = useState([]);
@@ -98,7 +98,7 @@ export default function Groups() {
               </div>
               <div className="row-actions">
                 {g.source === 'phone_placeholder' && g.audio_label_url && (
-                  <audio controls src={g.audio_label_url} />
+                  <audio controls src={groupAudioLabelUrl(g.id)} />
                 )}
                 <button className="icon-btn" onClick={() => openEdit(g)} aria-label="Rename group"><i className="ti ti-edit" /></button>
                 <button className="icon-btn danger" onClick={() => handleDelete(g.id)} aria-label="Delete group"><i className="ti ti-trash" /></button>
@@ -115,7 +115,7 @@ export default function Groups() {
             {editing && editing.source === 'phone_placeholder' && editing.audio_label_url && (
               <div className="field">
                 <label>Recorded name (from phone)</label>
-                <audio controls src={editing.audio_label_url} style={{ width: '100%' }} />
+                <audio controls src={groupAudioLabelUrl(editing.id)} style={{ width: '100%' }} />
               </div>
             )}
             <form onSubmit={handleSave}>
