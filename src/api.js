@@ -60,11 +60,11 @@ export function groupAudioLabelUrl(groupId) {
 
 export const api = {
   auth: {
-    login: async (password) => {
+    login: async (username, password) => {
       const res = await fetch(`${BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -100,5 +100,7 @@ export const api = {
     getPin: () => request('/settings/pin'),
     setPin: (pin) => request('/settings/pin', { method: 'PUT', body: JSON.stringify({ pin }) }),
     setPortalPassword: (password) => request('/settings/portal-password', { method: 'PUT', body: JSON.stringify({ password }) }),
+    getPortalUsername: () => request('/settings/portal-username'),
+    setPortalUsername: (username) => request('/settings/portal-username', { method: 'PUT', body: JSON.stringify({ username }) }),
   },
 };

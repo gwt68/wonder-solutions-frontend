@@ -9,6 +9,13 @@ export default function Settings() {
   const [pinSuccess, setPinSuccess] = useState('');
   const [pinSaving, setPinSaving] = useState(false);
 
+  const [currentUsername, setCurrentUsername] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [userLoading, setUserLoading] = useState(true);
+  const [userError, setUserError] = useState('');
+  const [userSuccess, setUserSuccess] = useState('');
+  const [userSaving, setUserSaving] = useState(false);
+
   const [newPassword, setNewPassword] = useState('');
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState('');
@@ -19,6 +26,11 @@ export default function Settings() {
       .then((r) => setCurrentPin(r.pin))
       .catch((e) => setPinError(e.message))
       .finally(() => setPinLoading(false));
+
+    api.settings.getPortalUsername()
+      .then((r) => setCurrentUsername(r.username))
+      .catch((e) => setUserError(e.message))
+      .finally(() => setUserLoading(false));
   }, []);
 
   async function handleSavePin(e) {
@@ -35,6 +47,23 @@ export default function Settings() {
       setPinError(err.message);
     } finally {
       setPinSaving(false);
+    }
+  }
+
+  async function handleSaveUsername(e) {
+    e.preventDefault();
+    setUserError('');
+    setUserSuccess('');
+    setUserSaving(true);
+    try {
+      await api.settings.setPortalUsername(newUsername);
+      setCurrentUsername(newUsername);
+      setNewUsername('');
+      setUserSuccess('Username updated. Use it next time you log in.');
+    } catch (err) {
+      setUserError(err.message);
+    } finally {
+      setUserSaving(false);
     }
   }
 
@@ -88,6 +117,33 @@ export default function Settings() {
             />
           </div>
           <button type="submit" className="btn" disabled={pinSaving}>{pinSaving ? 'Saving...' : 'Update PIN'}</button>
+        </form>
+      </div>
+
+      <div className="card" style={{ padding: 22, maxWidth: 420, marginBottom: 18 }}>
+        <h3 style={{ marginBottom: 4 }}>Web portal username</h3>
+        <p style={{ color: 'var(--ink-soft)', fontSize: 13.5, margin: '0 0 16px' }}>
+          Used together with your password to log in to this website.
+        </p>
+        {userError && <div className="banner error">{userError}</div>}
+        {userSuccess && <div className="banner ok">{userSuccess}</div>}
+        {!userLoading && (
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 20, marginBottom: 18 }}>
+            Current username: {currentUsername}
+          </p>
+        )}
+        <form onSubmit={handleSaveUsername}>
+          <div className="field">
+            <label>New username</label>
+            <input
+              required
+              minLength={2}
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="e.g. moishe"
+            />
+          </div>
+          <button type="submit" className="btn" disabled={userSaving}>{userSaving ? 'Saving...' : 'Update username'}</button>
         </form>
       </div>
 

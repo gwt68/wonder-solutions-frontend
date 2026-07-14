@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { api, setToken } from '../api.js';
 
 export default function Login({ onLogin }) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -11,7 +12,7 @@ export default function Login({ onLogin }) {
     setError('');
     setLoading(true);
     try {
-      const { token } = await api.auth.login(password);
+      const { token } = await api.auth.login(username, password);
       setToken(token);
       onLogin();
     } catch (err) {
@@ -40,11 +41,19 @@ export default function Login({ onLogin }) {
         {error && <div className="banner error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="field">
+            <label>Username</label>
+            <input
+              required
+              autoFocus
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="field">
             <label>Password</label>
             <input
               type="password"
               required
-              autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
