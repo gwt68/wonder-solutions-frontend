@@ -88,6 +88,7 @@ export const api = {
   },
   messages: {
     list: () => request('/messages'),
+    create: (data) => request('/messages', { method: 'POST', body: JSON.stringify(data) }),
     remove: (id) => request(`/messages/${id}`, { method: 'DELETE' }),
     rename: (id, title) => request(`/messages/${id}`, { method: 'PUT', body: JSON.stringify({ title }) }),
     uploadAudio: (file, title) => {
