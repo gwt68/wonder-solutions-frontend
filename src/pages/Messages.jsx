@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, audioUrl } from '../api.js';
 import { trimAudioToWav } from '../audioTrim.js';
+import SendModal from '../components/SendModal.jsx';
 
 const TYPE_LABELS = { sms: 'Text', call: 'Phone call', voice_note: 'Voice note' };
 
@@ -10,6 +11,7 @@ export default function Messages() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(null); // the message object being edited
+  const [sendingMessage, setSendingMessage] = useState(null);
   const fileInputRef = useRef(null);
 
   async function load() {
@@ -100,6 +102,7 @@ export default function Messages() {
                 )}
               </div>
               <div className="row-actions">
+                <button className="icon-btn" onClick={() => setSendingMessage(m)} aria-label="Send recording"><i className="ti ti-send" /></button>
                 <button className="icon-btn" onClick={() => setEditing(m)} aria-label="Edit recording"><i className="ti ti-edit" /></button>
                 <button className="icon-btn danger" onClick={() => handleDelete(m.id)} aria-label="Delete message"><i className="ti ti-trash" /></button>
               </div>
@@ -114,6 +117,10 @@ export default function Messages() {
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); load(); }}
         />
+      )}
+
+      {sendingMessage && (
+        <SendModal message={sendingMessage} onClose={() => setSendingMessage(null)} />
       )}
     </div>
   );

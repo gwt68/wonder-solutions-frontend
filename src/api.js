@@ -112,6 +112,10 @@ export const api = {
       return res.json();
     },
   },
+  sends: {
+    create: (data) => request('/sends', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => request('/sends'),
+  },
   settings: {
     getPin: () => request('/settings/pin'),
     setPin: (pin) => request('/settings/pin', { method: 'PUT', body: JSON.stringify({ pin }) }),

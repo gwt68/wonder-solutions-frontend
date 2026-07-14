@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import SendModal from '../components/SendModal.jsx';
 
 export default function Texts() {
   const [messages, setMessages] = useState([]);
@@ -9,6 +10,7 @@ export default function Texts() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -84,6 +86,7 @@ export default function Texts() {
                 {m.text_content && <p style={{ margin: '6px 0 0', fontSize: 14 }}>{m.text_content}</p>}
               </div>
               <div className="row-actions">
+                <button className="icon-btn" onClick={() => setSendingMessage(m)} aria-label="Send text"><i className="ti ti-send" /></button>
                 <button className="icon-btn danger" onClick={() => handleDelete(m.id)} aria-label="Delete text"><i className="ti ti-trash" /></button>
               </div>
             </div>
@@ -117,6 +120,9 @@ export default function Texts() {
             </form>
           </div>
         </div>
+      )}
+      {sendingMessage && (
+        <SendModal message={sendingMessage} onClose={() => setSendingMessage(null)} />
       )}
     </div>
   );
