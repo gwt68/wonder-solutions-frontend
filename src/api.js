@@ -89,11 +89,27 @@ export const api = {
   messages: {
     list: () => request('/messages'),
     remove: (id) => request(`/messages/${id}`, { method: 'DELETE' }),
+    rename: (id, title) => request(`/messages/${id}`, { method: 'PUT', body: JSON.stringify({ title }) }),
     uploadAudio: (file, title) => {
       const formData = new FormData();
       formData.append('audio', file);
       if (title) formData.append('title', title);
       return upload('/messages/upload', formData);
+    },
+    replaceAudio: async (id, blob) => {
+      const formData = new FormData();
+      formData.append('audio', blob, 'trimmed.wav');
+      const token = getToken();
+      const res = await fetch(`${BASE}/api/messages/${id}/audio`, {
+        method: 'PUT',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to save trimmed audio');
+      }
+      return res.json();
     },
   },
   settings: {
