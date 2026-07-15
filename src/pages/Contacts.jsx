@@ -273,45 +273,53 @@ export default function Contacts() {
                 />
               </div>
               <div className="field">
-                <label>How can they receive messages? (choose one or more)</label>
-                <div className="checkbox-group">
-                  {ALL_METHODS.map((m) => (
-                    <label className="checkbox-row" key={m.value}>
-                      <input
-                        type="checkbox"
-                        checked={form.methods.includes(m.value)}
-                        onChange={() => toggleMethod(m.value)}
-                      />
-                      {m.label}
-                    </label>
-                  ))}
+                <label>How can they receive messages?</label>
+                <p className="field-hint">Tap to select one or more. The star marks the default used automatically when sending.</p>
+                <div className="chip-select">
+                  {ALL_METHODS.map((m) => {
+                    const active = form.methods.includes(m.value);
+                    const isDefault = form.preferred_method === m.value;
+                    return (
+                      <button
+                        type="button"
+                        key={m.value}
+                        className={`chip-toggle ${active ? 'active' : ''}`}
+                        onClick={() => toggleMethod(m.value)}
+                      >
+                        {m.label}
+                        {active && (
+                          <span
+                            className={`star-btn ${isDefault ? 'is-default' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, preferred_method: m.value })); }}
+                            title={isDefault ? 'Default method' : 'Set as default'}
+                          >
+                            <i className={isDefault ? 'ti ti-star-filled' : 'ti ti-star'} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-              <div className="field">
-                <label>Default method</label>
-                <select
-                  value={form.preferred_method}
-                  onChange={(e) => setForm({ ...form, preferred_method: e.target.value })}
-                >
-                  {ALL_METHODS.filter((m) => form.methods.includes(m.value)).map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
               </div>
               {groups.length > 0 && (
                 <div className="field">
                   <label>Groups</label>
-                  <div className="checkbox-group">
-                    {groups.map((g) => (
-                      <label className="checkbox-row" key={g.id}>
-                        <input
-                          type="checkbox"
-                          checked={form.group_ids.includes(g.id)}
-                          onChange={() => toggleGroup(g.id)}
-                        />
-                        {g.name}
-                      </label>
-                    ))}
+                  <p className="field-hint">Optional — tap any group to add this contact to it.</p>
+                  <div className="chip-select">
+                    {groups.map((g) => {
+                      const active = form.group_ids.includes(g.id);
+                      return (
+                        <button
+                          type="button"
+                          key={g.id}
+                          className={`chip-toggle ${active ? 'active' : ''}`}
+                          onClick={() => toggleGroup(g.id)}
+                        >
+                          {active && <i className="ti ti-check" />}
+                          {g.name}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -2,11 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { api, audioUrl } from '../api.js';
 
 const METHOD_LABELS = { sms: 'text', call: 'phone call', voice_note: 'voice note' };
+const METHOD_OPTIONS = [
+  { value: 'sms', label: 'Text' },
+  { value: 'call', label: 'Phone call' },
+  { value: 'voice_note', label: 'Voice note' },
+];
 
 export default function SendForm({ message, onSent }) {
   const [contacts, setContacts] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [selected, setSelected] = useState(new Set());
+  const [selected, setSelected] = useState(new Map()); // contactId -> method
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [step, setStep] = useState('select'); // 'select' | 'preview'
@@ -23,20 +28,29 @@ export default function SendForm({ message, onSent }) {
       .finally(() => setLoading(false));
   }, []);
 
-  function toggleContact(id) {
+  function contactMethods(c) {
+    return c.methods && c.methods.length ? c.methods : [c.preferred_method];
+  }
+
+  function toggleContact(c) {
     setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      const next = new Map(prev);
+      if (next.has(c.id)) next.delete(c.id);
+      else next.set(c.id, c.preferred_method);
       return next;
     });
   }
 
+  function setContactMethod(contactId, method) {
+    setSelected((prev) => new Map(prev).set(contactId, method));
+  }
+
   function selectAll() {
-    setSelected(new Set(contacts.map((c) => c.id)));
+    setSelected(new Map(contacts.map((c) => [c.id, c.preferred_method])));
   }
 
   function unselectAll() {
-    setSelected(new Set());
+    setSelected(new Map());
   }
 
   async function handleAddGroup(group) {
@@ -45,8 +59,8 @@ export default function SendForm({ message, onSent }) {
     try {
       const members = await api.groups.contacts(group.id);
       setSelected((prev) => {
-        const next = new Set(prev);
-        members.forEach((c) => next.add(c.id));
+        const next = new Map(prev);
+        members.forEach((c) => { if (!next.has(c.id)) next.set(c.id, c.preferred_method); });
         return next;
       });
     } catch (err) {
@@ -67,9 +81,10 @@ export default function SendForm({ message, onSent }) {
     setSending(true);
     setError('');
     try {
+      const recipients = [...selected.entries()].map(([contact_id, method]) => ({ contact_id, method }));
       const res = await api.sends.create({
         message_id: message.id,
-        contact_ids: [...selected],
+        recipients,
         scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
       });
       setResult(res);
@@ -95,8 +110,8 @@ export default function SendForm({ message, onSent }) {
 
   if (step === 'preview') {
     const selectedContacts = contacts.filter((c) => selected.has(c.id));
-    const methodCounts = selectedContacts.reduce((acc, c) => {
-      acc[c.preferred_method] = (acc[c.preferred_method] || 0) + 1;
+    const methodCounts = [...selected.values()].reduce((acc, method) => {
+      acc[method] = (acc[method] || 0) + 1;
       return acc;
     }, {});
 
@@ -125,7 +140,7 @@ export default function SendForm({ message, onSent }) {
 
           <div style={{ maxHeight: 140, overflowY: 'auto', fontSize: 13, color: 'var(--ink-soft)', marginBottom: 12 }}>
             {selectedContacts.map((c) => (
-              <div key={c.id}>{c.name || c.phone_number} — {METHOD_LABELS[c.preferred_method]}</div>
+              <div key={c.id}>{c.name || c.phone_number} — {METHOD_LABELS[selected.get(c.id)]}</div>
             ))}
           </div>
 
@@ -178,21 +193,45 @@ export default function SendForm({ message, onSent }) {
             <button type="button" onClick={unselectAll} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12.5, cursor: 'pointer' }}>Unselect all</button>
           </div>
         </div>
-        <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 7 }}>
+        <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 7 }}>
           {contacts.length === 0 ? (
             <p style={{ padding: 12, fontSize: 13, color: 'var(--ink-soft)' }}>No contacts yet.</p>
           ) : (
-            contacts.map((c) => (
-              <label
-                key={c.id}
-                className="checkbox-row"
-                style={{ padding: '9px 12px', borderBottom: '1px solid var(--line)', fontSize: 13.5 }}
-              >
-                <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleContact(c.id)} />
-                <span style={{ flex: 1 }}>{c.name || c.phone_number}</span>
-                <span style={{ color: 'var(--ink-faint)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{METHOD_LABELS[c.preferred_method]}</span>
-              </label>
-            ))
+            contacts.map((c) => {
+              const isSelected = selected.has(c.id);
+              const methods = contactMethods(c);
+              return (
+                <div key={c.id} style={{ borderBottom: '1px solid var(--line)', padding: '9px 12px' }}>
+                  <label className="checkbox-row" style={{ fontSize: 13.5 }}>
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleContact(c)} />
+                    <span style={{ flex: 1 }}>{c.name || c.phone_number}</span>
+                    {!isSelected && (
+                      <span style={{ color: 'var(--ink-faint)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{METHOD_LABELS[c.preferred_method]}</span>
+                    )}
+                  </label>
+                  {isSelected && methods.length > 1 && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6, marginLeft: 24, flexWrap: 'wrap' }}>
+                      {methods.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setContactMethod(c.id, m)}
+                          className={selected.get(c.id) === m ? 'pill' : 'pill signal'}
+                          style={{ border: 'none', cursor: 'pointer' }}
+                        >
+                          {METHOD_OPTIONS.find((o) => o.value === m)?.label || m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {isSelected && methods.length === 1 && (
+                    <div style={{ marginLeft: 24, marginTop: 4, fontSize: 12, color: 'var(--ink-faint)' }}>
+                      Will send as {METHOD_LABELS[methods[0]]} (only method available)
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>

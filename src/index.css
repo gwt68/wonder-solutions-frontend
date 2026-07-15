@@ -303,3 +303,53 @@ input, select, textarea {
 .banner.ok { background: var(--accent-soft); color: var(--accent); }
 
 audio { height: 32px; }
+
+/* --- Chip toggles (used for methods & groups in the contact dialog) --- */
+.chip-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.chip-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip-toggle .star-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 2px;
+  display: inline-flex;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.55;
+  font-size: 13px;
+}
+.chip-toggle .star-btn.is-default {
+  opacity: 1;
+  color: var(--signal);
+}
+.field-hint {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin: -2px 0 8px;
+}
