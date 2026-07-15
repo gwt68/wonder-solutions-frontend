@@ -4,8 +4,14 @@ import { api } from '../api.js';
 
 const METHOD_LABELS = { sms: 'Text', call: 'Phone call', voice_note: 'Voice note' };
 
+const ALL_METHODS = [
+  { value: 'sms', label: 'Text message' },
+  { value: 'call', label: 'Phone call' },
+  { value: 'voice_note', label: 'Voice note (MMS)' },
+];
+
 function emptyForm() {
-  return { name: '', phone_number: '', email: '', address: '', preferred_method: 'sms', notes: '', group_ids: [] };
+  return { name: '', phone_number: '', email: '', address: '', methods: ['sms'], preferred_method: 'sms', notes: '', group_ids: [] };
 }
 
 // Maps common header variants in an uploaded spreadsheet to our field names
@@ -69,11 +75,22 @@ export default function Contacts() {
       phone_number: contact.phone_number,
       email: contact.email || '',
       address: contact.address || '',
+      methods: contact.methods && contact.methods.length ? contact.methods : [contact.preferred_method],
       preferred_method: contact.preferred_method,
       notes: contact.notes || '',
       group_ids: contact.groups.map((g) => g.id),
     });
     setModalOpen(true);
+  }
+
+  function toggleMethod(value) {
+    setForm((f) => {
+      const has = f.methods.includes(value);
+      let methods = has ? f.methods.filter((m) => m !== value) : [...f.methods, value];
+      if (!methods.length) methods = [value]; // never allow zero methods enabled
+      const preferred_method = methods.includes(f.preferred_method) ? f.preferred_method : methods[0];
+      return { ...f, methods, preferred_method };
+    });
   }
 
   async function handleSave(e) {
@@ -197,7 +214,15 @@ export default function Contacts() {
                 </span>
                 {c.address && <span className="row-sub" style={{ color: 'var(--ink-faint)' }}>{c.address}</span>}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                  <span className="pill">{METHOD_LABELS[c.preferred_method]}</span>
+                  {(c.methods && c.methods.length ? c.methods : [c.preferred_method]).map((m) => (
+                    <span
+                      className={m === c.preferred_method ? 'pill' : 'pill signal'}
+                      key={m}
+                      title={m === c.preferred_method ? 'Default' : undefined}
+                    >
+                      {METHOD_LABELS[m]}{m === c.preferred_method ? ' ★' : ''}
+                    </span>
+                  ))}
                   {c.groups.map((g) => (
                     <span className="pill signal" key={g.id}>{g.name}</span>
                   ))}
@@ -248,14 +273,29 @@ export default function Contacts() {
                 />
               </div>
               <div className="field">
-                <label>How should they receive messages?</label>
+                <label>How can they receive messages? (choose one or more)</label>
+                <div className="checkbox-group">
+                  {ALL_METHODS.map((m) => (
+                    <label className="checkbox-row" key={m.value}>
+                      <input
+                        type="checkbox"
+                        checked={form.methods.includes(m.value)}
+                        onChange={() => toggleMethod(m.value)}
+                      />
+                      {m.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="field">
+                <label>Default method</label>
                 <select
                   value={form.preferred_method}
                   onChange={(e) => setForm({ ...form, preferred_method: e.target.value })}
                 >
-                  <option value="sms">Text message</option>
-                  <option value="call">Phone call</option>
-                  <option value="voice_note">Voice note (MMS)</option>
+                  {ALL_METHODS.filter((m) => form.methods.includes(m.value)).map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
                 </select>
               </div>
               {groups.length > 0 && (

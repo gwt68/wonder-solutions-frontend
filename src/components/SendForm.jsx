@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api, audioUrl } from '../api.js';
 
 const METHOD_LABELS = { sms: 'text', call: 'phone call', voice_note: 'voice note' };
 
@@ -105,7 +105,16 @@ export default function SendForm({ message, onSent }) {
         {error && <div className="banner error">{error}</div>}
         <div className="card" style={{ padding: 16, marginBottom: 16, background: 'var(--bg)' }}>
           <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 4 }}>Sending</p>
-          <p style={{ fontWeight: 600, marginBottom: 12 }}>{message.title || 'Untitled message'}</p>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>{message.title || 'Untitled message'}</p>
+
+          {message.text_content && (
+            <p style={{ fontSize: 14, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 7, padding: '10px 12px', marginBottom: 12, whiteSpace: 'pre-wrap' }}>
+              {message.text_content}
+            </p>
+          )}
+          {(message.audio_url || message.has_uploaded_audio) && (
+            <audio controls src={audioUrl(message.id)} style={{ width: '100%', marginBottom: 12 }} />
+          )}
 
           <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 4 }}>To {selectedContacts.length} recipient{selectedContacts.length !== 1 ? 's' : ''}</p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
