@@ -98,6 +98,8 @@ export const api = {
     update: (id, data) => request(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id) => request(`/groups/${id}`, { method: 'DELETE' }),
     contacts: (id) => request(`/groups/${id}/contacts`),
+    addContacts: (id, contact_ids) => request(`/groups/${id}/contacts`, { method: 'POST', body: JSON.stringify({ contact_ids }) }),
+    removeContact: (id, contactId) => request(`/groups/${id}/contacts/${contactId}`, { method: 'DELETE' }),
   },
   messages: {
     list: () => request('/messages'),
@@ -129,6 +131,8 @@ export const api = {
   sends: {
     create: (data) => request('/sends', { method: 'POST', body: JSON.stringify(data) }),
     list: () => request('/sends'),
+    listForContact: (contactId) => request(`/sends?contact_id=${contactId}`),
+    remove: (id) => request(`/sends/${id}`, { method: 'DELETE' }),
   },
   settings: {
     getPin: () => request('/settings/pin'),

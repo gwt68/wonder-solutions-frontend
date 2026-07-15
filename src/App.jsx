@@ -72,7 +72,7 @@ export default function App() {
         </button>
       </aside>
       <main className="main">
-        {page === 'dashboard' && <Dashboard />}
+        {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
         {page === 'contacts' && <Contacts />}
         {page === 'groups' && <Groups />}
         {page === 'texts' && <Texts />}

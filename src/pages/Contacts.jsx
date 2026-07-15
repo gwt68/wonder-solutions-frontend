@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { api } from '../api.js';
+import { api, audioUrl } from '../api.js';
 
 const METHOD_LABELS = { sms: 'Text', call: 'Phone call', voice_note: 'Voice note' };
 
@@ -45,6 +45,9 @@ export default function Contacts() {
   const [saving, setSaving] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [sortField, setSortField] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
+  const [logContact, setLogContact] = useState(null);
   const fileInputRef = useRef(null);
 
   async function load() {
@@ -87,7 +90,7 @@ export default function Contacts() {
     setForm((f) => {
       const has = f.methods.includes(value);
       let methods = has ? f.methods.filter((m) => m !== value) : [...f.methods, value];
-      if (!methods.length) methods = [value]; // never allow zero methods enabled
+      if (!methods.length) methods = [value];
       const preferred_method = methods.includes(f.preferred_method) ? f.preferred_method : methods[0];
       return { ...f, methods, preferred_method };
     });
@@ -165,6 +168,35 @@ export default function Contacts() {
     }
   }
 
+  function handleSort(field) {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
+
+  const sortedContacts = useMemo(() => {
+    const copy = [...contacts];
+    copy.sort((a, b) => {
+      let av, bv;
+      if (sortField === 'name') { av = (a.name || '').toLowerCase(); bv = (b.name || '').toLowerCase(); }
+      else if (sortField === 'phone_number') { av = a.phone_number; bv = b.phone_number; }
+      else if (sortField === 'groups') { av = (a.groups[0]?.name || '').toLowerCase(); bv = (b.groups[0]?.name || '').toLowerCase(); }
+      else { av = ''; bv = ''; }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return copy;
+  }, [contacts, sortField, sortDir]);
+
+  function sortArrow(field) {
+    if (sortField !== field) return null;
+    return <span className="sort-arrow">{sortDir === 'asc' ? '▲' : '▼'}</span>;
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -203,37 +235,50 @@ export default function Contacts() {
           <p>Add your first contact, import a spreadsheet, or call your Wonder Solutions line and press 3.</p>
         </div>
       ) : (
-        <div className="list">
-          {contacts.map((c) => (
-            <div className="row" key={c.id}>
-              <div className="row-main">
-                <span className="row-title">{c.name || 'Unnamed contact'}</span>
-                <span className="row-sub">
-                  {c.phone_number}
-                  {c.email ? ` · ${c.email}` : ''}
-                </span>
-                {c.address && <span className="row-sub" style={{ color: 'var(--ink-faint)' }}>{c.address}</span>}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                  {(c.methods && c.methods.length ? c.methods : [c.preferred_method]).map((m) => (
-                    <span
-                      className={m === c.preferred_method ? 'pill' : 'pill signal'}
-                      key={m}
-                      title={m === c.preferred_method ? 'Default' : undefined}
-                    >
-                      {METHOD_LABELS[m]}{m === c.preferred_method ? ' ★' : ''}
-                    </span>
-                  ))}
-                  {c.groups.map((g) => (
-                    <span className="pill signal" key={g.id}>{g.name}</span>
-                  ))}
-                </div>
-              </div>
-              <div className="row-actions">
-                <button className="icon-btn" onClick={() => openEdit(c)} aria-label="Edit contact"><i className="ti ti-edit" /></button>
-                <button className="icon-btn danger" onClick={() => handleDelete(c.id)} aria-label="Delete contact"><i className="ti ti-trash" /></button>
-              </div>
-            </div>
-          ))}
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th onClick={() => handleSort('name')}>Name{sortArrow('name')}</th>
+                <th onClick={() => handleSort('phone_number')}>Phone{sortArrow('phone_number')}</th>
+                <th>Methods</th>
+                <th onClick={() => handleSort('groups')}>Groups{sortArrow('groups')}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedContacts.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{c.name || 'Unnamed contact'}</div>
+                    {c.email && <div style={{ color: 'var(--ink-soft)', fontSize: 12.5 }}>{c.email}</div>}
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{c.phone_number}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {(c.methods && c.methods.length ? c.methods : [c.preferred_method]).map((m) => (
+                        <span className={m === c.preferred_method ? 'pill' : 'pill signal'} key={m}>
+                          {METHOD_LABELS[m]}{m === c.preferred_method ? ' ★' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {c.groups.map((g) => <span className="pill signal" key={g.id}>{g.name}</span>)}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      <button className="icon-btn" onClick={() => setLogContact(c)} aria-label="View history"><i className="ti ti-history" /></button>
+                      <button className="icon-btn" onClick={() => openEdit(c)} aria-label="Edit contact"><i className="ti ti-edit" /></button>
+                      <button className="icon-btn danger" onClick={() => handleDelete(c.id)} aria-label="Delete contact"><i className="ti ti-trash" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -363,6 +408,61 @@ export default function Contacts() {
           </div>
         </div>
       )}
+
+      {logContact && (
+        <ContactLogModal contact={logContact} onClose={() => setLogContact(null)} />
+      )}
+    </div>
+  );
+}
+
+const METHOD_LABELS_LOWER = { sms: 'text', call: 'phone call', voice_note: 'voice note' };
+
+function ContactLogModal({ contact, onClose }) {
+  const [sends, setSends] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.sends.listForContact(contact.id)
+      .then(setSends)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [contact.id]);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>History for {contact.name || contact.phone_number}</h2>
+        {error && <div className="banner error">{error}</div>}
+        {loading ? (
+          <p style={{ color: 'var(--ink-soft)' }}>Loading...</p>
+        ) : sends.length === 0 ? (
+          <p style={{ color: 'var(--ink-soft)', fontSize: 14 }}>Nothing has been sent to this contact yet.</p>
+        ) : (
+          <div className="list" style={{ maxHeight: 360, overflowY: 'auto' }}>
+            {sends.map((s) => (
+              <div className="row" key={s.id}>
+                <div className="row-main">
+                  <span className="row-title">{s.message_title || 'Untitled'}</span>
+                  <span className="row-sub">
+                    via {METHOD_LABELS_LOWER[s.effective_method] || s.effective_method}
+                    {s.sent_at && ` · ${new Date(s.sent_at).toLocaleString()}`}
+                    {s.status === 'scheduled' && s.scheduled_at && ` · scheduled for ${new Date(s.scheduled_at).toLocaleString()}`}
+                  </span>
+                  {s.error_message && <span className="row-sub" style={{ color: 'var(--danger)' }}>{s.error_message}</span>}
+                </div>
+                <span className="pill" style={s.status === 'failed' ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>
+                  {s.status === 'sent' ? 'Sent' : s.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="modal-actions">
+          <button type="button" className="btn secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
     </div>
   );
 }
