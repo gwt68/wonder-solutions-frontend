@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
-
-const METHOD_LABELS = { sms: 'text', call: 'phone call', voice_note: 'voice note' };
+import { groupSendsIntoBroadcasts } from '../broadcastUtils.js';
 
 export default function Dashboard({ onNavigate }) {
   const [contacts, setContacts] = useState([]);
@@ -21,17 +20,22 @@ export default function Dashboard({ onNavigate }) {
   if (loading) return <p style={{ color: 'var(--ink-soft)' }}>Loading...</p>;
   if (error) return <div className="banner error">{error}</div>;
 
+  const broadcasts = groupSendsIntoBroadcasts(sends);
   const today = new Date().toDateString();
-  const sentToday = sends.filter((s) => s.sent_at && new Date(s.sent_at).toDateString() === today).length;
-  const scheduled = sends.filter((s) => s.status === 'scheduled');
-  const recentActivity = sends.filter((s) => s.status !== 'scheduled').slice(0, 8);
+  const broadcastsSentToday = broadcasts.filter((b) => b.latestSentAt && new Date(b.latestSentAt).toDateString() === today).length;
+  const upcomingBroadcasts = broadcasts.filter((b) => b.scheduledAt && (b.counts.scheduled || 0) > 0);
+  const recentBroadcasts = broadcasts.filter((b) => !(b.counts.scheduled > 0 && !b.counts.sent && !b.counts.failed)).slice(0, 8);
+
+  const textCount = messages.filter((m) => m.type === 'sms').length;
+  const recordingCount = messages.filter((m) => m.type !== 'sms').length;
 
   const stats = [
     { label: 'Contacts', value: contacts.length, page: 'contacts' },
     { label: 'Groups', value: groups.length, page: 'groups' },
-    { label: 'Messages', value: messages.length, page: 'messages' },
-    { label: 'Sent today', value: sentToday, page: 'history' },
-    { label: 'Scheduled', value: scheduled.length, page: 'history' },
+    { label: 'Texts', value: textCount, page: 'texts' },
+    { label: 'Recordings', value: recordingCount, page: 'messages' },
+    { label: 'Broadcasts sent today', value: broadcastsSentToday, page: 'history' },
+    { label: 'Scheduled', value: upcomingBroadcasts.length, page: 'history' },
   ];
 
   return (
@@ -52,17 +56,15 @@ export default function Dashboard({ onNavigate }) {
         ))}
       </div>
 
-      {scheduled.length > 0 && (
+      {upcomingBroadcasts.length > 0 && (
         <>
-          <h3 style={{ fontSize: 15, marginBottom: 10 }}>Upcoming scheduled sends</h3>
+          <h3 style={{ fontSize: 15, marginBottom: 10 }}>Upcoming scheduled broadcasts</h3>
           <div className="list" style={{ marginBottom: 28 }}>
-            {scheduled.slice(0, 5).map((s) => (
-              <div className="row" key={s.id}>
+            {upcomingBroadcasts.slice(0, 5).map((b) => (
+              <div className="row" key={b.batchId}>
                 <div className="row-main">
-                  <span className="row-title">{s.message_title || 'Untitled'} → {s.contact_name || s.phone_number}</span>
-                  <span className="row-sub">
-                    via {METHOD_LABELS[s.effective_method] || s.effective_method} · {new Date(s.scheduled_at).toLocaleString()}
-                  </span>
+                  <span className="row-title">{b.messageTitle || 'Untitled'} → {b.total} recipient{b.total !== 1 ? 's' : ''}</span>
+                  <span className="row-sub">{new Date(b.scheduledAt).toLocaleString()}</span>
                 </div>
                 <span className="pill signal">Scheduled</span>
               </div>
@@ -72,24 +74,24 @@ export default function Dashboard({ onNavigate }) {
       )}
 
       <h3 style={{ fontSize: 15, marginBottom: 10 }}>Recent activity</h3>
-      {recentActivity.length === 0 ? (
+      {recentBroadcasts.length === 0 ? (
         <div className="card empty-state">
           <h3>Nothing sent yet</h3>
           <p>Send your first message and it'll show up here.</p>
         </div>
       ) : (
         <div className="list">
-          {recentActivity.map((s) => (
-            <div className="row" key={s.id}>
+          {recentBroadcasts.map((b) => (
+            <div className="row" key={b.batchId}>
               <div className="row-main">
-                <span className="row-title">{s.message_title || 'Untitled'} → {s.contact_name || s.phone_number}</span>
+                <span className="row-title">{b.messageTitle || 'Untitled'} → {b.total} recipient{b.total !== 1 ? 's' : ''}</span>
                 <span className="row-sub">
-                  via {METHOD_LABELS[s.effective_method] || s.effective_method}
-                  {s.sent_at && ` · ${new Date(s.sent_at).toLocaleString()}`}
+                  {b.latestSentAt && new Date(b.latestSentAt).toLocaleString()}
+                  {b.counts.failed > 0 && ` · ${b.counts.failed} failed`}
                 </span>
               </div>
-              <span className="pill" style={s.status === 'failed' ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>
-                {s.status === 'sent' ? 'Sent' : s.status}
+              <span className="pill" style={b.counts.failed > 0 && !b.counts.sent ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>
+                {b.counts.sent > 0 ? `${b.counts.sent} sent` : `${b.counts.failed} failed`}
               </span>
             </div>
           ))}

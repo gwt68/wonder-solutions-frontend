@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api.js';
-
-const STATUS_STYLES = {
-  sent: { className: 'pill', label: 'Sent' },
-  scheduled: { className: 'pill signal', label: 'Scheduled' },
-  failed: { className: 'pill', label: 'Failed', style: { background: 'var(--danger-soft)', color: 'var(--danger)' } },
-};
+import { api, audioUrl } from '../api.js';
+import { groupSendsIntoBroadcasts } from '../broadcastUtils.js';
 
 const DELIVERY_LABELS = {
   queued: 'Queued', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', undelivered: 'Undelivered', failed: 'Failed',
@@ -14,16 +9,18 @@ const DELIVERY_LABELS = {
 };
 
 const ANSWERED_BY_LABELS = {
-  human: 'Answered by a person',
-  machine_start: 'Went to voicemail',
-  machine_end_beep: 'Went to voicemail',
-  machine_end_silence: 'Went to voicemail',
-  machine_end_other: 'Went to voicemail',
-  fax: 'Answered by a fax machine',
+  human: 'Person answered',
+  machine_start: 'Voicemail',
+  machine_end_beep: 'Voicemail',
+  machine_end_silence: 'Voicemail',
+  machine_end_other: 'Voicemail',
+  fax: 'Fax machine',
   unknown: 'Unknown',
 };
 
-const METHOD_LABELS = { sms: 'text', call: 'phone call', voice_note: 'voice note' };
+const METHOD_LABELS = { sms: 'Text', call: 'Phone call', voice_note: 'Voice note' };
+const METHOD_ICONS = { sms: 'ti-message', call: 'ti-phone', voice_note: 'ti-microphone' };
+const TYPE_LABELS = { sms: 'Text', call: 'Phone call', voice_note: 'Voice note' };
 
 function formatDuration(seconds) {
   if (!seconds && seconds !== 0) return null;
@@ -36,6 +33,7 @@ export default function History() {
   const [sends, setSends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState(new Set());
 
   async function load() {
     setLoading(true);
@@ -50,8 +48,8 @@ export default function History() {
 
   useEffect(() => { load(); }, []);
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this record from history?')) return;
+  async function handleDeleteRecipient(id) {
+    if (!confirm('Remove this recipient from the record?')) return;
     try {
       await api.sends.remove(id);
       await load();
@@ -60,12 +58,22 @@ export default function History() {
     }
   }
 
+  function toggleExpand(batchId) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(batchId)) next.delete(batchId); else next.add(batchId);
+      return next;
+    });
+  }
+
+  const broadcasts = groupSendsIntoBroadcasts(sends);
+
   return (
     <div>
       <div className="page-header">
         <div>
           <h1>History</h1>
-          <p>What's been sent and scheduled</p>
+          <p>What's been sent and scheduled, grouped by broadcast</p>
         </div>
         <button className="btn secondary" onClick={load}><i className="ti ti-refresh" /> Refresh</button>
       </div>
@@ -74,43 +82,83 @@ export default function History() {
 
       {loading ? (
         <p style={{ color: 'var(--ink-soft)' }}>Loading...</p>
-      ) : sends.length === 0 ? (
+      ) : broadcasts.length === 0 ? (
         <div className="card empty-state">
           <h3>Nothing sent yet</h3>
           <p>Once you send or schedule a message, it'll show up here.</p>
         </div>
       ) : (
         <div className="list">
-          {sends.map((s) => {
-            const statusInfo = STATUS_STYLES[s.status] || { className: 'pill', label: s.status };
-            const duration = formatDuration(s.call_duration);
+          {broadcasts.map((b) => {
+            const isOpen = expanded.has(b.batchId);
+            const isScheduled = b.counts.scheduled > 0 && !b.counts.sent && !b.counts.failed;
             return (
-              <div className="row" key={s.id}>
-                <div className="row-main">
-                  <span className="row-title">
-                    {s.message_title || 'Untitled message'}
-                    <span style={{ color: 'var(--ink-soft)', fontWeight: 400 }}> → {s.contact_name || s.phone_number}</span>
-                  </span>
-                  <span className="row-sub">
-                    {s.phone_number} · via {METHOD_LABELS[s.effective_method] || s.effective_method}
-                    {s.status === 'scheduled' && s.scheduled_at && ` · scheduled for ${new Date(s.scheduled_at).toLocaleString()}`}
-                    {s.sent_at && ` · ${new Date(s.sent_at).toLocaleString()}`}
-                  </span>
-                  {s.delivery_status && (
-                    <span className="row-sub">
-                      {DELIVERY_LABELS[s.delivery_status] || s.delivery_status}
-                      {duration && ` · ${duration}`}
-                      {s.answered_by && ` · ${ANSWERED_BY_LABELS[s.answered_by] || s.answered_by}`}
-                    </span>
-                  )}
-                  {s.error_message && (
-                    <span className="row-sub" style={{ color: 'var(--danger)' }}>{s.error_message}</span>
-                  )}
+              <div className="card" key={b.batchId}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', cursor: 'pointer' }}
+                  onClick={() => toggleExpand(b.batchId)}
+                >
+                  <div>
+                    <div style={{ fontWeight: 500, fontSize: 14.5 }}>
+                      {b.messageTitle || 'Untitled message'}
+                      <span style={{ color: 'var(--ink-soft)', fontWeight: 400 }}> · {TYPE_LABELS[b.messageType] || b.messageType}</span>
+                    </div>
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 2 }}>
+                      To {b.total} recipient{b.total !== 1 ? 's' : ''}
+                      {isScheduled && b.scheduledAt && ` · scheduled for ${new Date(b.scheduledAt).toLocaleString()}`}
+                      {!isScheduled && b.latestSentAt && ` · ${new Date(b.latestSentAt).toLocaleString()}`}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {b.counts.sent > 0 && <span className="pill">{b.counts.sent} sent</span>}
+                    {b.counts.failed > 0 && <span className="pill" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{b.counts.failed} failed</span>}
+                    {b.counts.scheduled > 0 && <span className="pill signal">{b.counts.scheduled} scheduled</span>}
+                    <i className={`ti ${isOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ color: 'var(--ink-faint)' }} />
+                  </div>
                 </div>
-                <div className="row-actions">
-                  <span className={statusInfo.className} style={statusInfo.style}>{statusInfo.label}</span>
-                  <button className="icon-btn danger" onClick={() => handleDelete(s.id)} aria-label="Delete record"><i className="ti ti-trash" /></button>
-                </div>
+
+                {isOpen && (
+                  <div style={{ borderTop: '1px solid var(--line)', padding: '14px 18px' }}>
+                    {b.messageText && (
+                      <p style={{ fontSize: 13.5, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 7, padding: '10px 12px', marginBottom: 12, whiteSpace: 'pre-wrap' }}>
+                        {b.messageText}
+                      </p>
+                    )}
+                    {(b.messageAudioUrl || b.messageHasUploadedAudio) && (
+                      <audio controls src={audioUrl(b.messageId)} style={{ width: '100%', marginBottom: 12 }} />
+                    )}
+
+                    <div className="list">
+                      {b.recipients.map((s) => {
+                        const duration = formatDuration(s.call_duration);
+                        return (
+                          <div className="row" key={s.id}>
+                            <div className="row-main">
+                              <span className="row-title">
+                                <i className={`ti ${METHOD_ICONS[s.effective_method] || 'ti-send'}`} style={{ marginRight: 6, color: 'var(--ink-faint)' }} />
+                                {s.contact_name || s.phone_number}
+                                <span style={{ color: 'var(--ink-soft)', fontWeight: 400 }}> · {METHOD_LABELS[s.effective_method] || s.effective_method}</span>
+                              </span>
+                              <span className="row-sub">
+                                {s.phone_number}
+                                {s.delivery_status && ` · ${DELIVERY_LABELS[s.delivery_status] || s.delivery_status}`}
+                                {duration && ` · ${duration}`}
+                                {s.answered_by && ` · ${ANSWERED_BY_LABELS[s.answered_by] || s.answered_by}`}
+                              </span>
+                              {s.error_message && <span className="row-sub" style={{ color: 'var(--danger)' }}>{s.error_message}</span>}
+                            </div>
+                            <div className="row-actions">
+                              <span className="pill" style={s.status === 'failed' ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>
+                                {s.status === 'sent' ? 'Sent' : s.status}
+                              </span>
+                              <button className="icon-btn danger" onClick={() => handleDeleteRecipient(s.id)} aria-label="Delete record"><i className="ti ti-trash" /></button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

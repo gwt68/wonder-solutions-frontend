@@ -141,5 +141,6 @@ export const api = {
     getPortalUsername: () => request('/settings/portal-username'),
     setPortalUsername: (username) => request('/settings/portal-username', { method: 'PUT', body: JSON.stringify({ username }) }),
     setRecoveryKey: (recovery_key) => request('/settings/recovery-key', { method: 'PUT', body: JSON.stringify({ recovery_key }) }),
+    getTwilioNumber: () => request('/settings/twilio-number'),
   },
 };

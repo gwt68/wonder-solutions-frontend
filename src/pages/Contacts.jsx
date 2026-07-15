@@ -48,6 +48,7 @@ export default function Contacts() {
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [logContact, setLogContact] = useState(null);
+  const [groupFilter, setGroupFilter] = useState('all');
   const fileInputRef = useRef(null);
 
   async function load() {
@@ -178,7 +179,10 @@ export default function Contacts() {
   }
 
   const sortedContacts = useMemo(() => {
-    const copy = [...contacts];
+    const filtered = groupFilter === 'all'
+      ? contacts
+      : contacts.filter((c) => c.groups.some((g) => String(g.id) === String(groupFilter)));
+    const copy = [...filtered];
     copy.sort((a, b) => {
       let av, bv;
       if (sortField === 'name') { av = (a.name || '').toLowerCase(); bv = (b.name || '').toLowerCase(); }
@@ -190,7 +194,7 @@ export default function Contacts() {
       return 0;
     });
     return copy;
-  }, [contacts, sortField, sortDir]);
+  }, [contacts, sortField, sortDir, groupFilter]);
 
   function sortArrow(field) {
     if (sortField !== field) return null;
@@ -235,7 +239,29 @@ export default function Contacts() {
           <p>Add your first contact, import a spreadsheet, or call your Wonder Solutions line and press 3.</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <>
+          {groups.length > 0 && (
+            <div className="chip-select" style={{ marginBottom: 14 }}>
+              <button
+                type="button"
+                className={`chip-toggle ${groupFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setGroupFilter('all')}
+              >
+                All contacts
+              </button>
+              {groups.map((g) => (
+                <button
+                  type="button"
+                  key={g.id}
+                  className={`chip-toggle ${String(groupFilter) === String(g.id) ? 'active' : ''}`}
+                  onClick={() => setGroupFilter(g.id)}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ overflowX: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -280,6 +306,7 @@ export default function Contacts() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {modalOpen && (
@@ -442,19 +469,29 @@ function ContactLogModal({ contact, onClose }) {
         ) : (
           <div className="list" style={{ maxHeight: 360, overflowY: 'auto' }}>
             {sends.map((s) => (
-              <div className="row" key={s.id}>
-                <div className="row-main">
-                  <span className="row-title">{s.message_title || 'Untitled'}</span>
-                  <span className="row-sub">
-                    via {METHOD_LABELS_LOWER[s.effective_method] || s.effective_method}
-                    {s.sent_at && ` · ${new Date(s.sent_at).toLocaleString()}`}
-                    {s.status === 'scheduled' && s.scheduled_at && ` · scheduled for ${new Date(s.scheduled_at).toLocaleString()}`}
+              <div className="row" key={s.id} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                  <div className="row-main">
+                    <span className="row-title">{s.message_title || 'Untitled'}</span>
+                    <span className="row-sub">
+                      via {METHOD_LABELS_LOWER[s.effective_method] || s.effective_method}
+                      {s.sent_at && ` · ${new Date(s.sent_at).toLocaleString()}`}
+                      {s.status === 'scheduled' && s.scheduled_at && ` · scheduled for ${new Date(s.scheduled_at).toLocaleString()}`}
+                    </span>
+                    {s.error_message && <span className="row-sub" style={{ color: 'var(--danger)' }}>{s.error_message}</span>}
+                  </div>
+                  <span className="pill" style={s.status === 'failed' ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>
+                    {s.status === 'sent' ? 'Sent' : s.status}
                   </span>
-                  {s.error_message && <span className="row-sub" style={{ color: 'var(--danger)' }}>{s.error_message}</span>}
                 </div>
-                <span className="pill" style={s.status === 'failed' ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>
-                  {s.status === 'sent' ? 'Sent' : s.status}
-                </span>
+                {s.message_text && (
+                  <p style={{ fontSize: 13, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 7, padding: '8px 10px', margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
+                    {s.message_text}
+                  </p>
+                )}
+                {(s.message_audio_url || s.message_has_uploaded_audio) && (
+                  <audio controls src={audioUrl(s.message_id)} style={{ width: '100%', marginTop: 8 }} />
+                )}
               </div>
             ))}
           </div>
