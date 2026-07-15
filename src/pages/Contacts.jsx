@@ -273,12 +273,20 @@ export default function Contacts() {
                 />
               </div>
               <div className="field">
-                <label>How can they receive messages?</label>
-                <p className="field-hint">Tap to select one or more. The star marks the default used automatically when sending.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <label style={{ margin: 0 }}>How can they receive messages?</label>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, methods: ALL_METHODS.map((m) => m.value) }))}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12.5, cursor: 'pointer' }}
+                  >
+                    Select all
+                  </button>
+                </div>
+                <p className="field-hint">Tap to select one or more.</p>
                 <div className="chip-select">
                   {ALL_METHODS.map((m) => {
                     const active = form.methods.includes(m.value);
-                    const isDefault = form.preferred_method === m.value;
                     return (
                       <button
                         type="button"
@@ -286,21 +294,36 @@ export default function Contacts() {
                         className={`chip-toggle ${active ? 'active' : ''}`}
                         onClick={() => toggleMethod(m.value)}
                       >
+                        {active && <i className="ti ti-check" />}
                         {m.label}
-                        {active && (
-                          <span
-                            className={`star-btn ${isDefault ? 'is-default' : ''}`}
-                            onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, preferred_method: m.value })); }}
-                            title={isDefault ? 'Default method' : 'Set as default'}
-                          >
-                            <i className={isDefault ? 'ti ti-star-filled' : 'ti ti-star'} />
-                          </span>
-                        )}
                       </button>
                     );
                   })}
                 </div>
               </div>
+
+              {form.methods.length > 1 && (
+                <div className="field">
+                  <label>Default method</label>
+                  <p className="field-hint">Used automatically when sending, unless you choose a different one for a specific send.</p>
+                  <div className="chip-select">
+                    {ALL_METHODS.filter((m) => form.methods.includes(m.value)).map((m) => {
+                      const isDefault = form.preferred_method === m.value;
+                      return (
+                        <button
+                          type="button"
+                          key={m.value}
+                          className={`chip-toggle ${isDefault ? 'active' : ''}`}
+                          onClick={() => setForm((f) => ({ ...f, preferred_method: m.value }))}
+                        >
+                          <i className={isDefault ? 'ti ti-star-filled' : 'ti ti-star'} />
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {groups.length > 0 && (
                 <div className="field">
                   <label>Groups</label>
