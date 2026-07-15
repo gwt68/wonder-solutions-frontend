@@ -72,6 +72,18 @@ export const api = {
       }
       return res.json();
     },
+    recover: async (data) => {
+      const res = await fetch(`${BASE}/api/auth/recover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Recovery failed');
+      }
+      return res.json();
+    },
   },
   contacts: {
     list: () => request('/contacts'),
@@ -85,6 +97,7 @@ export const api = {
     create: (data) => request('/groups', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => request(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id) => request(`/groups/${id}`, { method: 'DELETE' }),
+    contacts: (id) => request(`/groups/${id}/contacts`),
   },
   messages: {
     list: () => request('/messages'),
@@ -123,5 +136,6 @@ export const api = {
     setPortalPassword: (password) => request('/settings/portal-password', { method: 'PUT', body: JSON.stringify({ password }) }),
     getPortalUsername: () => request('/settings/portal-username'),
     setPortalUsername: (username) => request('/settings/portal-username', { method: 'PUT', body: JSON.stringify({ username }) }),
+    setRecoveryKey: (recovery_key) => request('/settings/recovery-key', { method: 'PUT', body: JSON.stringify({ recovery_key }) }),
   },
 };

@@ -28,7 +28,7 @@ export default function Send() {
 
       {error && <div className="banner error">{error}</div>}
 
-      <div className="card" style={{ padding: 22, maxWidth: 460 }}>
+      <div className="card" style={{ padding: 22, maxWidth: 520 }}>
         <div className="field">
           <label>Message</label>
           <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} disabled={loading}>
@@ -41,7 +41,12 @@ export default function Send() {
           </select>
         </div>
 
-        {selectedId && <SendForm key={selectedId} messageId={parseInt(selectedId, 10)} />}
+        {selectedId && (
+          <SendForm
+            key={selectedId}
+            message={messages.find((m) => m.id === parseInt(selectedId, 10))}
+          />
+        )}
       </div>
     </div>
   );

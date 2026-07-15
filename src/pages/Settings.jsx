@@ -21,6 +21,11 @@ export default function Settings() {
   const [pwSuccess, setPwSuccess] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [recoveryKey, setRecoveryKey] = useState('');
+  const [rkError, setRkError] = useState('');
+  const [rkSuccess, setRkSuccess] = useState('');
+  const [rkSaving, setRkSaving] = useState(false);
+
   useEffect(() => {
     api.settings.getPin()
       .then((r) => setCurrentPin(r.pin))
@@ -80,6 +85,22 @@ export default function Settings() {
       setPwError(err.message);
     } finally {
       setPwSaving(false);
+    }
+  }
+
+  async function handleSaveRecoveryKey(e) {
+    e.preventDefault();
+    setRkError('');
+    setRkSuccess('');
+    setRkSaving(true);
+    try {
+      await api.settings.setRecoveryKey(recoveryKey);
+      setRecoveryKey('');
+      setRkSuccess('Recovery key set. Keep it somewhere safe — you\'ll need it if you ever forget your login.');
+    } catch (err) {
+      setRkError(err.message);
+    } finally {
+      setRkSaving(false);
     }
   }
 
@@ -144,6 +165,29 @@ export default function Settings() {
             />
           </div>
           <button type="submit" className="btn" disabled={userSaving}>{userSaving ? 'Saving...' : 'Update username'}</button>
+        </form>
+      </div>
+
+      <div className="card" style={{ padding: 22, maxWidth: 420, marginBottom: 18 }}>
+        <h3 style={{ marginBottom: 4 }}>Account recovery key</h3>
+        <p style={{ color: 'var(--ink-soft)', fontSize: 13.5, margin: '0 0 16px' }}>
+          Lets you reset your username and password if you ever forget them, from the "Forgot username or password?"
+          link on the login screen. Set this up now, before you need it — for security, the current key isn't shown here.
+        </p>
+        {rkError && <div className="banner error">{rkError}</div>}
+        {rkSuccess && <div className="banner ok">{rkSuccess}</div>}
+        <form onSubmit={handleSaveRecoveryKey}>
+          <div className="field">
+            <label>New recovery key (at least 4 characters)</label>
+            <input
+              required
+              minLength={4}
+              value={recoveryKey}
+              onChange={(e) => setRecoveryKey(e.target.value)}
+              placeholder="A phrase or code only you know"
+            />
+          </div>
+          <button type="submit" className="btn" disabled={rkSaving}>{rkSaving ? 'Saving...' : 'Set recovery key'}</button>
         </form>
       </div>
 

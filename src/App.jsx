@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Dashboard from './pages/Dashboard.jsx';
 import Contacts from './pages/Contacts.jsx';
 import Groups from './pages/Groups.jsx';
 import Texts from './pages/Texts.jsx';
@@ -10,6 +11,7 @@ import Login from './pages/Login.jsx';
 import { setToken } from './api.js';
 
 const PAGES = [
+  { key: 'dashboard', label: 'Dashboard' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'groups', label: 'Groups' },
   { key: 'texts', label: 'Texts' },
@@ -20,7 +22,7 @@ const PAGES = [
 ];
 
 export default function App() {
-  const [page, setPage] = useState('contacts');
+  const [page, setPage] = useState('dashboard');
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('wonder_token'));
 
   useEffect(() => {
@@ -70,6 +72,7 @@ export default function App() {
         </button>
       </aside>
       <main className="main">
+        {page === 'dashboard' && <Dashboard />}
         {page === 'contacts' && <Contacts />}
         {page === 'groups' && <Groups />}
         {page === 'texts' && <Texts />}
