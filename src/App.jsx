@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import Dashboard from './pages/Dashboard.jsx';
 import Contacts from './pages/Contacts.jsx';
 import Groups from './pages/Groups.jsx';
-import Texts from './pages/Texts.jsx';
 import Messages from './pages/Messages.jsx';
 import Send from './pages/Send.jsx';
 import History from './pages/History.jsx';
@@ -14,8 +13,7 @@ const PAGES = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'groups', label: 'Groups' },
-  { key: 'texts', label: 'Texts' },
-  { key: 'messages', label: 'Recordings' },
+  { key: 'messages', label: 'Messages' },
   { key: 'send', label: 'Send' },
   { key: 'history', label: 'History' },
   { key: 'settings', label: 'Settings' },
@@ -75,7 +73,6 @@ export default function App() {
         {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
         {page === 'contacts' && <Contacts />}
         {page === 'groups' && <Groups />}
-        {page === 'texts' && <Texts />}
         {page === 'messages' && <Messages />}
         {page === 'send' && <Send />}
         {page === 'history' && <History />}

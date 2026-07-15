@@ -26,15 +26,13 @@ export default function Dashboard({ onNavigate }) {
   const upcomingBroadcasts = broadcasts.filter((b) => b.scheduledAt && (b.counts.scheduled || 0) > 0);
   const recentBroadcasts = broadcasts.filter((b) => !(b.counts.scheduled > 0 && !b.counts.sent && !b.counts.failed)).slice(0, 8);
 
-  const textCount = messages.filter((m) => m.type === 'sms').length;
-  const recordingCount = messages.filter((m) => m.type !== 'sms').length;
+  const messageCount = messages.length;
 
   const stats = [
     { label: 'Contacts', value: contacts.length, page: 'contacts' },
     { label: 'Groups', value: groups.length, page: 'groups' },
-    { label: 'Texts', value: textCount, page: 'texts' },
-    { label: 'Recordings', value: recordingCount, page: 'messages' },
-    { label: 'Broadcasts sent today', value: broadcastsSentToday, page: 'history' },
+    { label: 'Messages', value: messageCount, page: 'messages' },
+    { label: 'Broadcasts sent', value: broadcastsSentToday, page: 'history' },
     { label: 'Scheduled', value: upcomingBroadcasts.length, page: 'history' },
   ];
 

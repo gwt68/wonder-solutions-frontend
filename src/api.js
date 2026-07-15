@@ -106,6 +106,7 @@ export const api = {
     create: (data) => request('/messages', { method: 'POST', body: JSON.stringify(data) }),
     remove: (id) => request(`/messages/${id}`, { method: 'DELETE' }),
     rename: (id, title) => request(`/messages/${id}`, { method: 'PUT', body: JSON.stringify({ title }) }),
+    editText: (id, title, text_content) => request(`/messages/${id}`, { method: 'PUT', body: JSON.stringify({ title, text_content }) }),
     uploadAudio: (file, title) => {
       const formData = new FormData();
       formData.append('audio', file);
